@@ -123,15 +123,17 @@
         <p class="subtitle">這是一個使用 Python Flask 框架所建立的現代化一頁式網站。</p>
         
         <div class="info-box">
+            <div style="margin-bottom: 8px;"><strong>製作者：</strong><span style="color: #4f46e5; font-weight: 600;">{{ author }}</span></div>
             <div><strong>伺服器渲染時間：</strong></div>
-            <div>{{ current_time }}</div>
+            <div style="color: #64748b;">{{ current_time }}</div>
         </div>
 
         <button class="btn" onclick="handleClick()">點擊互動</button>
         <div id="clickMessage">🎉 恭喜！你的 Flask 網站運作正常！</div>
 
         <div class="footer">
-            Powered by Flask & Jinja2 Template
+            <div>Made with ❤️ by <strong>{{ author }}</strong></div>
+            <div style="margin-top: 4px;">Powered by Flask & Jinja2 Template</div>
         </div>
     </div>
 
