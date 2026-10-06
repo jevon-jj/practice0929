@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}企業訂單管理系統{% endblock %} - Order Management System</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bs-body-font-family: 'Noto Sans TC', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            --primary-gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            --sidebar-bg: #0f172a;
+        }
+        body {
+            font-family: var(--bs-body-font-family);
+            background-color: #f8fafc;
+            color: #334155;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar-brand-custom {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #ffffff !important;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .main-navbar {
+            background: #0f172a;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .nav-link {
+            font-weight: 500;
+            color: #94a3b8 !important;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            padding: 0.5rem 0.85rem !important;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #ffffff !important;
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+        .card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            border-top-left-radius: 12px !important;
+            border-top-right-radius: 12px !important;
+            font-weight: 600;
+        }
+        .badge-status-處理中 {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .badge-status-已出貨 {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .badge-status-已完成 {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .badge-status-已取消 {
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-gradient-primary {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+        }
+        .btn-gradient-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            color: white;
+        }
+        .table > :not(caption) > * > * {
+            padding: 0.85rem 1rem;
+            vertical-align: middle;
+        }
+        .table thead th {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        footer {
+            margin-top: auto;
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 1.25rem 0;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg main-navbar py-2 sticky-top">
+        <div class="container-fluid px-lg-5">
+            <a class="navbar-brand navbar-brand-custom" href="{{ url_for('orders_list') }}">
+                <i class="bi bi-box-seam-fill text-primary fs-4"></i>
+                <span>智慧訂單管理系統</span>
+            </a>
+            <button class="navbar-toggler text-white border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <i class="bi bi-list fs-2 text-light"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+                    {% if is_logged_in %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint in ['orders_list', 'order_create'] %}active{% endif %}" href="{{ url_for('orders_list') }}">
+                            <i class="bi bi-receipt me-1"></i> 訂單管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'customers_list' %}active{% endif %}" href="{{ url_for('customers_list') }}">
+                            <i class="bi bi-people me-1"></i> 客戶維護
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'products_list' %}active{% endif %}" href="{{ url_for('products_list') }}">
+                            <i class="bi bi-boxes me-1"></i> 商品維護
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    {% if is_logged_in %}
+                    <div class="text-light small d-none d-md-block">
+                        <i class="bi bi-person-circle me-1 text-info"></i> {{ current_user }}
+                    </div>
+                    <a href="{{ url_for('order_create') }}" class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm">
+                        <i class="bi bi-plus-circle"></i> 新增訂單
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light d-flex align-items-center gap-1">
+                        <i class="bi bi-box-arrow-right"></i> 登出
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-person-lock me-1"></i> 管理員登入
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container-fluid px-lg-5 mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm d-flex align-items-center gap-2" role="alert">
+                        {% if category == 'success' %}<i class="bi bi-check-circle-fill fs-5 text-success"></i>
+                        {% elif category == 'danger' %}<i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                        {% elif category == 'warning' %}<i class="bi bi-exclamation-circle-fill fs-5 text-warning"></i>
+                        {% else %}<i class="bi bi-info-circle-fill fs-5 text-info"></i>
+                        {% endif %}
+                        <div>{{ message }}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="container-fluid px-lg-5 py-3 flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container-fluid px-lg-5 text-center d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+            <div>
+                &copy; 2026 企業訂單管理系統 (Flask + SQLite + Bootstrap 5)
+            </div>
+            <div>
+                <span class="badge bg-secondary-subtle text-secondary border">UTF-8 編碼保證</span>
+                <span class="badge bg-primary-subtle text-primary border ms-1">即時單價快照</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

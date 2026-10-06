@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}客戶維護{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-people-fill text-primary me-2"></i>客戶資料維護</h3>
+        <p class="text-muted small mb-0">管理企業與客戶聯絡人資訊，維護客戶編號、電話與送貨地址</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary px-3 shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#customerModal" onclick="openAddModal()">
+            <i class="bi bi-person-plus-fill"></i> 新增客戶
+        </button>
+    </div>
+</div>
+
+<!-- 搜尋列 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('customers_list') }}" class="row g-2">
+            <div class="col-md-9">
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="搜尋客戶編號、名稱、電話或地址..." value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i> 搜尋
+                </button>
+                {% if search_query %}
+                <a href="{{ url_for('customers_list') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise"></i> 重設
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 客戶清單 Table -->
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 140px;">客戶編號 (PK)</th>
+                    <th>客戶名稱</th>
+                    <th style="width: 160px;">連絡電話</th>
+                    <th>送貨地址</th>
+                    <th style="width: 110px;" class="text-center">關聯訂單</th>
+                    <th style="width: 140px;" class="text-center">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if customers %}
+                    {% for c in customers %}
+                    <tr>
+                        <td class="font-monospace fw-bold text-primary">{{ c.customer_id }}</td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ c.name }}</div>
+                        </td>
+                        <td>
+                            <span class="text-secondary"><i class="bi bi-telephone me-1"></i>{{ c.phone }}</span>
+                        </td>
+                        <td>
+                            <span class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ c.address }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">{{ c.order_count }} 筆</span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary btn-edit-customer" 
+                                        data-id="{{ c.customer_id }}"
+                                        data-name="{{ c.name }}"
+                                        data-phone="{{ c.phone }}"
+                                        data-address="{{ c.address }}"
+                                        title="編輯客戶">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteCustModal{{ loop.index }}" title="刪除客戶">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <!-- 刪除 Modal -->
+                            <div class="modal fade" id="deleteCustModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content text-start">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>確認刪除客戶</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            確定要刪除客戶 <strong>[{{ c.customer_id }}] {{ c.name }}</strong> 嗎？
+                                            {% if c.order_count > 0 %}
+                                            <div class="alert alert-warning mt-2 mb-0 small">
+                                                <i class="bi bi-exclamation-circle me-1"></i> 此客戶已有 <strong>{{ c.order_count }}</strong> 筆歷史訂單，依資料庫外鍵關聯規則無法直接刪除。
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                            <form action="{{ url_for('customer_delete', customer_id=c.customer_id) }}" method="POST">
+                                                <button type="submit" class="btn btn-danger" {% if c.order_count > 0 %}disabled{% endif %}>確定刪除</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-people fs-1 d-block mb-2 text-secondary"></i>
+                            尚無客戶資料
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 新增/編輯客戶 Modal -->
+<div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('customer_save') }}">
+                <input type="hidden" name="mode" id="custModalMode" value="add">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="custModalTitle"><i class="bi bi-person-plus text-primary me-2"></i>新增客戶</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="modal_customer_id" class="form-label fw-bold">客戶編號 (PK) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control font-monospace" id="modal_customer_id" name="customer_id" placeholder="例如：CUST006" required>
+                        <div class="form-text">作為唯一識別碼，儲存後不可更改。</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal_cust_name" class="form-label fw-bold">客戶名稱 / 公司行號 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="modal_cust_name" name="name" placeholder="例如：台灣智能科技有限公司" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal_cust_phone" class="form-label fw-bold">連絡電話 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="modal_cust_phone" name="phone" placeholder="例如：02-88889999" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal_cust_address" class="form-label fw-bold">送貨地址 <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="modal_cust_address" name="address" rows="2" placeholder="例如：台北市中正區重慶南路一段122號" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存客戶資料</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
+const custModalMode = document.getElementById('custModalMode');
+const custModalTitle = document.getElementById('custModalTitle');
+const modalCustomerId = document.getElementById('modal_customer_id');
+const modalCustName = document.getElementById('modal_cust_name');
+const modalCustPhone = document.getElementById('modal_cust_phone');
+const modalCustAddress = document.getElementById('modal_cust_address');
+
+function openAddModal() {
+    custModalMode.value = 'add';
+    custModalTitle.innerHTML = '<i class="bi bi-person-plus text-primary me-2"></i>新增客戶';
+    modalCustomerId.value = '';
+    modalCustomerId.readOnly = false;
+    modalCustName.value = '';
+    modalCustPhone.value = '';
+    modalCustAddress.value = '';
+}
+
+document.querySelectorAll('.btn-edit-customer').forEach(btn => {
+    btn.addEventListener('click', function() {
+        custModalMode.value = 'edit';
+        custModalTitle.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>編輯客戶資料';
+        modalCustomerId.value = this.dataset.id;
+        modalCustomerId.readOnly = true;
+        modalCustName.value = this.dataset.name;
+        modalCustPhone.value = this.dataset.phone;
+        modalCustAddress.value = this.dataset.address;
+        customerModal.show();
+    });
+});
+</script>
+{% endblock %}

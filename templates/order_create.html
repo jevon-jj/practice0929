@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}建立新訂單{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+            <li class="breadcrumb-item"><a href="{{ url_for('orders_list') }}">訂單管理</a></li>
+            <li class="breadcrumb-item active" aria-current="page">建立新訂單</li>
+        </ol>
+    </nav>
+    <h3 class="fw-bold text-dark"><i class="bi bi-cart-plus text-primary me-2"></i>建立新訂單</h3>
+    <p class="text-muted small mb-0">請選擇客戶並勾選訂購之商品品項與填寫數量，系統將自動快照當前單價並扣減庫存</p>
+</div>
+
+<form method="POST" action="{{ url_for('order_create') }}" id="orderForm">
+    <div class="row g-4">
+        <!-- 左側：訂單基本資訊 -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm sticky-top" style="top: 80px; z-index: 10;">
+                <div class="card-header bg-light py-3">
+                    <h5 class="card-title mb-0 fs-6 fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>基本資料設定</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- 客戶下拉選單 (需求 6) -->
+                    <div class="mb-3">
+                        <label for="customer_id" class="form-label fw-bold">選擇客戶 <span class="text-danger">*</span></label>
+                        <select name="customer_id" id="customer_id" class="form-select select-customer" required>
+                            <option value="">-- 請選擇客戶 --</option>
+                            {% for c in customers %}
+                            <option value="{{ c.customer_id }}" data-phone="{{ c.phone }}" data-address="{{ c.address }}">
+                                [{{ c.customer_id }}] {{ c.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div id="customerInfoPreview" class="mt-2 p-2 bg-light rounded small border d-none">
+                            <div><i class="bi bi-telephone text-muted me-1"></i>電話：<span id="previewPhone" class="fw-semibold"></span></div>
+                            <div class="mt-1"><i class="bi bi-geo-alt text-muted me-1"></i>地址：<span id="previewAddress" class="text-secondary"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- 業務人員 -->
+                    <div class="mb-3">
+                        <label for="sales_rep" class="form-label fw-bold">承辦業務人員 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                            <input type="text" class="form-control" id="sales_rep" name="sales_rep" value="{{ default_sales_rep }}" required>
+                        </div>
+                    </div>
+
+                    <!-- 下單日期時間 -->
+                    <div class="mb-4">
+                        <label for="order_date" class="form-label fw-bold">訂單日期時間 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+                            <input type="text" class="form-control" id="order_date" name="order_date" value="{{ default_order_date }}" required>
+                        </div>
+                    </div>
+
+                    <!-- 即時金額結算 -->
+                    <div class="p-3 bg-primary bg-opacity-10 rounded-3 border border-primary border-opacity-25 mb-4">
+                        <div class="d-flex justify-content-between text-muted small mb-1">
+                            <span>已選商品項目：</span>
+                            <span id="summaryItemCount" class="fw-bold text-dark">0 項</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted small mb-2">
+                            <span>訂購商品總數量：</span>
+                            <span id="summaryTotalQty" class="fw-bold text-dark">0 件</span>
+                        </div>
+                        <hr class="my-2 border-primary border-opacity-25">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark">訂單總金額：</span>
+                            <span class="fs-4 fw-bold text-primary" id="summaryTotalPrice">NT$ 0</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg shadow-sm" id="submitBtn">
+                            <i class="bi bi-check2-circle me-1"></i> 確認建立訂單
+                        </button>
+                        <a href="{{ url_for('orders_list') }}" class="btn btn-outline-secondary">
+                            取消返回
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：商品多選清單與數量 (需求 6 & 7) -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="card-title mb-0 fs-6 fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>勾選訂購商品品項與數量</h5>
+                        <small class="text-muted">勾選商品並調整數量，系統會自動快照當前單價 (改價不影響歷史訂單)</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                            <i class="bi bi-check-all"></i> 全選
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
+                            <i class="bi bi-x-circle"></i> 全部取消
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;" class="text-center">選取</th>
+                                <th style="width: 110px;">商品編號</th>
+                                <th>商品名稱 / 分類</th>
+                                <th style="width: 130px;" class="text-end">當前單價</th>
+                                <th style="width: 100px;" class="text-center">庫存</th>
+                                <th style="width: 140px;" class="text-center">購買數量</th>
+                                <th style="width: 130px;" class="text-end">小計</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in products %}
+                            <tr class="product-row" id="row-{{ p.product_id }}">
+                                <td class="text-center">
+                                    <input class="form-check-input product-checkbox" type="checkbox" name="product_ids" value="{{ p.product_id }}" id="chk_{{ p.product_id }}" data-price="{{ p.price }}" data-stock="{{ p.stock }}">
+                                </td>
+                                <td>
+                                    <label for="chk_{{ p.product_id }}" class="fw-semibold text-secondary font-monospace mb-0" style="cursor: pointer;">
+                                        {{ p.product_id }}
+                                    </label>
+                                </td>
+                                <td>
+                                    <label for="chk_{{ p.product_id }}" class="fw-bold text-dark d-block mb-1" style="cursor: pointer;">
+                                        {{ p.name }}
+                                    </label>
+                                    <span class="badge bg-secondary-subtle text-secondary border">{{ p.category }}</span>
+                                </td>
+                                <td class="text-end font-monospace fw-semibold text-dark">
+                                    NT$ {{ "{:,}".format(p.price) }}
+                                </td>
+                                <td class="text-center">
+                                    {% if p.stock > 10 %}
+                                    <span class="badge bg-success-subtle text-success border">{{ p.stock }}</span>
+                                    {% elif p.stock > 0 %}
+                                    <span class="badge bg-warning-subtle text-warning border">{{ p.stock }}</span>
+                                    {% else %}
+                                    <span class="badge bg-danger-subtle text-danger border">缺貨中 (0)</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="qty_{{ p.product_id }}" id="qty_{{ p.product_id }}" class="form-control text-center quantity-input" value="1" min="1" max="9999" disabled>
+                                    </div>
+                                </td>
+                                <td class="text-end font-monospace fw-bold text-primary item-subtotal" id="subtotal_{{ p.product_id }}">
+                                    NT$ 0
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 客戶下拉選單預覽
+    const customerSelect = document.getElementById('customer_id');
+    const customerInfoPreview = document.getElementById('customerInfoPreview');
+    const previewPhone = document.getElementById('previewPhone');
+    const previewAddress = document.getElementById('previewAddress');
+
+    customerSelect.addEventListener('change', function() {
+        const selectedOpt = customerSelect.options[customerSelect.selectedIndex];
+        if (selectedOpt.value) {
+            previewPhone.textContent = selectedOpt.dataset.phone || '-';
+            previewAddress.textContent = selectedOpt.dataset.address || '-';
+            customerInfoPreview.classList.remove('d-none');
+        } else {
+            customerInfoPreview.classList.add('d-none');
+        }
+    });
+
+    // 商品核取方塊與數量聯動計算
+    const checkboxes = document.querySelectorAll('.product-checkbox');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
+    const summaryItemCount = document.getElementById('summaryItemCount');
+    const summaryTotalQty = document.getElementById('summaryTotalQty');
+    const summaryTotalPrice = document.getElementById('summaryTotalPrice');
+
+    function calculateTotals() {
+        let totalItems = 0;
+        let totalQty = 0;
+        let totalPrice = 0;
+
+        checkboxes.forEach(cb => {
+            const pid = cb.value;
+            const qtyInput = document.getElementById(`qty_${pid}`);
+            const subtotalEl = document.getElementById(`subtotal_${pid}`);
+            const row = document.getElementById(`row-${pid}`);
+            const price = parseInt(cb.dataset.price, 10) || 0;
+
+            if (cb.checked) {
+                qtyInput.disabled = false;
+                row.classList.add('table-primary');
+                const qty = parseInt(qtyInput.value, 10) || 1;
+                const subtotal = price * qty;
+                subtotalEl.textContent = `NT$ ${subtotal.toLocaleString()}`;
+
+                totalItems += 1;
+                totalQty += qty;
+                totalPrice += subtotal;
+            } else {
+                qtyInput.disabled = true;
+                row.classList.remove('table-primary');
+                subtotalEl.textContent = 'NT$ 0';
+            }
+        });
+
+        summaryItemCount.textContent = `${totalItems} 項`;
+        summaryTotalQty.textContent = `${totalQty} 件`;
+        summaryTotalPrice.textContent = `NT$ ${totalPrice.toLocaleString()}`;
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', calculateTotals);
+    });
+
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.value < 1) this.value = 1;
+            calculateTotals();
+        });
+    });
+
+    selectAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+        });
+        calculateTotals();
+    });
+
+    deselectAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+        });
+        calculateTotals();
+    });
+
+    // 表單提交驗證
+    document.getElementById('orderForm').addEventListener('submit', function(e) {
+        const checkedCount = document.querySelectorAll('.product-checkbox:checked').length;
+        if (!customerSelect.value) {
+            e.preventDefault();
+            alert('請選擇客戶！');
+            customerSelect.focus();
+            return;
+        }
+        if (checkedCount === 0) {
+            e.preventDefault();
+            alert('請至少勾選一項要訂購的商品！');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}
